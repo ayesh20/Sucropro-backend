@@ -52,8 +52,9 @@ const connectionString = process.env.MONGO_URI
 
 mongoose.connect(connectionString).then(() => {
     console.log("Connected to database")
-}).catch(() => {
+}).catch((error) => {
     console.log("Failed to connect to the database")
+    console.log(error)
 })
 
 /* ── Routes ── */
