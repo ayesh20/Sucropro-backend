@@ -12,20 +12,10 @@ const app = express()
 app.use(cors())
 app.use(bodyParser.json())
 
-/* ── Auth middleware ── 
-   Skip for public routes so login/register are never blocked
-*/
-const PUBLIC_ROUTES = [
-    "/api/admin/login",
-    "/api/admin/register",
-]
+
 
 app.use((req, res, next) => {
-    // Allow public routes without a token
-    if (PUBLIC_ROUTES.includes(req.path)) {
-        return next()
-    }
-
+   
     const value = req.header("Authorization")
 
     if (value != null) {
@@ -40,7 +30,7 @@ app.use((req, res, next) => {
             next()
         })
     } else {
-        // No token provided for a protected route
+        
         return res.status(401).json({
             message: "Authorization token required"
         })
@@ -60,7 +50,7 @@ mongoose.connect(connectionString).then(() => {
 /* ── Routes ── */
 app.use("/api/admin", adminRouter)
 
-/* ── Server ── */
+
 app.listen(process.env.PORT, () => {
     console.log("server started")
     console.log("port is " + process.env.PORT)
