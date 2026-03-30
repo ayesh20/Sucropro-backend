@@ -51,6 +51,37 @@ export async function getAllBatches(req, res) {
     }
 }
 
+/* ── Get batch by BatchId (string) ── */
+export async function getBatchByBatchId(req, res) {
+    try {
+        const batch = await Batch.findOne({ BatchId: req.params.batchId }, { __v: 0 });
+        if (!batch) return res.status(404).json({ message: "Batch not found" });
+        res.json(batch);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching batch", error: error.message });
+    }
+}
+
+/* ── Add new vehicle net weight to existing batch ── */
+export async function updateBatchWeight(req, res) {
+    try {
+        const { newNetWeight } = req.body;
+        if (newNetWeight === undefined || isNaN(newNetWeight)) {
+            return res.status(400).json({ message: "Valid newNetWeight is required" });
+        }
+
+        const batch = await Batch.findOne({ BatchId: req.params.batchId });
+        if (!batch) return res.status(404).json({ message: "Batch not found" });
+
+        batch.NetWeight = parseFloat((batch.NetWeight + parseFloat(newNetWeight)).toFixed(2));
+        await batch.save();
+
+        res.json({ message: "Batch weight updated successfully", batch });
+    } catch (error) {
+        res.status(500).json({ message: "Error updating batch weight", error: error.message });
+    }
+}
+
 /* ── Get single batch by ID ── */
 export async function getBatchById(req, res) {
     try {

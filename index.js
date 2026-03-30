@@ -4,6 +4,7 @@ import bodyParser from "body-parser"
 import adminRouter from "./routers/adminRouter.js"
 import calcRuter from "./routers/calcRouter.js"
 import batchRouter from "./routers/newbatchRouter.js"
+import renRouter from "./routers/renRouter.js"
 import jwt from "jsonwebtoken"
 import cors from "cors"
 import dotenv from "dotenv"
@@ -65,6 +66,7 @@ mongoose.connect(connectionString).then(() => {
 app.use("/api/admin", adminRouter)
 app.use("/api/calc", calcRuter)
 app.use("/api/batch", batchRouter)
+app.use("/api/rendement", renRouter)
 
 /* ── Server ── */
 app.listen(process.env.PORT, () => {
