@@ -22,19 +22,15 @@ const batchSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    VehicleWeight: {
-        type: Number,
-        required: true
-    },
-    NetWeight: {
-        type: Number,
-        required: true
-    },
     Caneage: {
         type: String,
         required: true
     },
     VehicleNo: {
+        type: String,
+        required: false
+    },
+    FarmerId: {
         type: String,
         required: false
     },

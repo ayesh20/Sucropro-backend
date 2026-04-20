@@ -4,6 +4,7 @@ import {
     getAllBatches,
     getBatchById,
     getBatchByBatchId,
+    getBatchByFarmerId,
     updateBatchWeight,
     deleteBatch
 } from '../controllers/newbatchController.js';
@@ -15,6 +16,8 @@ batchRouter.post("/add", createBatch);
 batchRouter.get("/get", getAllBatches);
 
 batchRouter.get("/find/:batchId", getBatchByBatchId);
+batchRouter.get("/find-by-farmer/:farmerId", getBatchByFarmerId);
+batchRouter.patch("/update-delivery/:batchId", updateBatchWeight);
 
 batchRouter.patch("/update-weight/:batchId", updateBatchWeight);
 

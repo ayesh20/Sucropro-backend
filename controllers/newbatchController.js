@@ -9,10 +9,9 @@ export async function createBatch(req, res) {
             FeildId,
             Vatiety,
             Weightwithvehicle,
-            VehicleWeight,
-            NetWeight,
             Caneage,
-            Note,
+            VehicleNo,
+            FarmerId,
             Unit
         } = req.body;
 
@@ -27,10 +26,9 @@ export async function createBatch(req, res) {
             FeildId,
             Vatiety,
             Weightwithvehicle,
-            VehicleWeight,
-            NetWeight,
             Caneage,
-            Note,
+            VehicleNo,
+            FarmerId,
             Unit
         });
 
@@ -62,23 +60,39 @@ export async function getBatchByBatchId(req, res) {
     }
 }
 
-/* ── Add new vehicle net weight to existing batch ── */
+/* ── Get most-recent batch by FarmerId (string) ── */
+export async function getBatchByFarmerId(req, res) {
+    try {
+        const batch = await Batch.findOne(
+            { FarmerId: req.params.farmerId },
+            { __v: 0 }
+        ).sort({ Date: -1 });   // most recent first
+        if (!batch) return res.status(404).json({ message: "No batch found for this Farmer ID" });
+        res.json(batch);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching batch by Farmer ID", error: error.message });
+    }
+}
+
+/* ── Add new vehicle data to existing batch ── */
 export async function updateBatchWeight(req, res) {
     try {
-        const { newNetWeight } = req.body;
-        if (newNetWeight === undefined || isNaN(newNetWeight)) {
-            return res.status(400).json({ message: "Valid newNetWeight is required" });
+        const { Weightwithvehicle, VehicleNo, Date } = req.body;
+        if (!Weightwithvehicle || !VehicleNo) {
+            return res.status(400).json({ message: "Weightwithvehicle and VehicleNo are required" });
         }
 
         const batch = await Batch.findOne({ BatchId: req.params.batchId });
         if (!batch) return res.status(404).json({ message: "Batch not found" });
 
-        batch.NetWeight = parseFloat((batch.NetWeight + parseFloat(newNetWeight)).toFixed(2));
+        batch.Weightwithvehicle = parseFloat(Weightwithvehicle);
+        batch.VehicleNo = VehicleNo;
+        if (Date) batch.Date = Date;
         await batch.save();
 
-        res.json({ message: "Batch weight updated successfully", batch });
+        res.json({ message: "Batch delivery metadata updated successfully", batch });
     } catch (error) {
-        res.status(500).json({ message: "Error updating batch weight", error: error.message });
+        res.status(500).json({ message: "Error updating batch delivery metadata", error: error.message });
     }
 }
 
