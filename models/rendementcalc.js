@@ -29,6 +29,10 @@ const rendementSchema = new mongoose.Schema({
     RealValue: {
         type: Number,
         required: true
+    },
+    date: {
+        type: Date,
+        default: Date.now
     }
 
 })

@@ -48,9 +48,9 @@ export async function getAllWeights(req, res) {
 
 export async function getWeightById(req, res) {
     try {
-        const weight = await Weight.findOne({ BatchId: req.params.batchId }, { __v: 0 });
-        if (!weight) return res.status(404).json({ message: "Weight not found" });
-        res.json(weight);
+        const weights = await Weight.find({ BatchId: req.params.batchId }, { __v: 0 });
+        if (!weights || weights.length === 0) return res.status(404).json({ message: "Weight not found" });
+        res.json(weights);
     } catch (error) {
         res.status(500).json({ message: "Error fetching weight", error: error.message });
     }

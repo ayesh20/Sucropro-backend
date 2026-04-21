@@ -111,7 +111,8 @@ export async function calculateRandement(req, res) {
             Purity: parseFloat(purity.toFixed(2)),
             Rendement: rendement,
             Grade: grade,
-            RealValue: realValue.toFixed(2)
+            RealValue: realValue.toFixed(2),
+            date: new Date()
         });
 
         await newRendement.save();
@@ -126,7 +127,8 @@ export async function calculateRandement(req, res) {
                 realValue: realValue.toFixed(2),
                 rendement: rendement.toFixed(1),
                 grade: grade,
-                RealValue: realValue.toFixed(2)
+                RealValue: realValue.toFixed(2),
+                date: new Date()
             }
         });
 
