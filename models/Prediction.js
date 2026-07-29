@@ -45,14 +45,10 @@ const predictionSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-
-    // Auto-fetched from weight collection
     batchWeight: {
         type: Number,
-        required: true             // NetWeight in tonnes
+        required: true
     },
-
-    // Auto-fetched from batches collection
     caneAge: {
         type: Number,
         required: true
@@ -63,24 +59,27 @@ const predictionSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    // % = entryRendement - predictedRendement
     predictedLoss: {
         type: Number,
-        required: true             // % = entryRendement - predictedRendement
+        required: true
     },
+    // tonnes = batchWeight * (predictedLoss/100)
     sucroseLoss: {
         type: Number,
-        required: true             // tonnes = batchWeight * (predictedLoss/100)
+        required: true
     },
+    // tonnes = batchWeight * (predictedRendement/100)
     predictedSucrose: {
         type: Number,
-        required: true             // tonnes = batchWeight * (predictedRendement/100)
+        required: true
     },
+    // tonnes = batchWeight * (entryRendement/100)
     entrySucrose: {
         type: Number,
-        required: true             // tonnes = batchWeight * (entryRendement/100)
+        required: true
     },
 
-    // Feature importance from ML model
     featureImportance: {
         type: Object,
         default: {}

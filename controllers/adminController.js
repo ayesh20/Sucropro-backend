@@ -17,7 +17,7 @@ export async function registerAdmin(req, res) {
             Name,
             email,
             password: hashedPassword,
-            role: role || "admin",   // ← save role from request
+            role: role || "admin",
         });
         await newUser.save();
         res.status(201).json({
@@ -72,7 +72,7 @@ export async function updateUser(req, res) {
     const { Name, email, password, role } = req.body;
     try {
         const updateData = { Name, email, role };
-        // only update password if provided
+
         if (password && password.trim() !== "") {
             updateData.password = bcrypt.hashSync(password, 10);
         }

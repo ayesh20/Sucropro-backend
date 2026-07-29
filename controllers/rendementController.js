@@ -31,7 +31,6 @@ async function getRealValue(enteredBrix, enteredPol) {
 
     let realValue = parseFloat(record.Value);
 
-    // Add offset from lookup table if a decimal exists (.1 to .9)
     if (decimalPol > 0 && decimalPol < 10) {
         realValue += polOffsets[decimalPol];
     }
@@ -86,7 +85,7 @@ export async function calculateRandement(req, res) {
         const realValue = await getRealValue(enteredBrix, enteredPol);
         const purity = (realValue / enteredBrix) * 100;
 
-        // Rendement Formula: =( (purity-6.4)*0.78*(realValue-2)/100)
+
         const rawRendement = ((purity - 6.4) * 0.78 * (realValue - 2)) / 100;
         const rendement = parseFloat(rawRendement.toFixed(1));
 
@@ -100,10 +99,9 @@ export async function calculateRandement(req, res) {
         } else if (rendement >= 6 && rendement < 6.5) {
             grade = "Grade D";
         } else {
-            grade = "Grade E"; // < 6
+            grade = "Grade E";
         }
 
-        // Save to Database
         const newRendement = new Rendement({
             BatchId,
             Brix: enteredBrix,

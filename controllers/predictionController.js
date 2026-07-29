@@ -5,12 +5,8 @@ import Rendement from '../models/rendementcalc.js';
 import Weight from '../models/weight.js';
 import Batch from '../models/newbatch.js';
 
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL;
 
-/* ─────────────────────────────────────────────────────────────
-   GET /api/predictions/batch-data/:batchId
-   Auto-fills the prediction form with data from 3 collections
-───────────────────────────────────────────────────────────── */
 export async function getBatchDataForPrediction(req, res) {
     try {
         const { batchId } = req.params;
@@ -49,7 +45,7 @@ export async function getBatchDataForPrediction(req, res) {
             entryRendement: rendementRecord.Rendement,
             // From weight collection
             batchWeight: weightRecord.NetWeight,
-            storageCompartment: weightRecord.StorageUnit || 'N/A',  // auto-filled A/B/C
+            storageCompartment: weightRecord.StorageUnit || 'N/A',
             // From batches collection
             caneAge: parseInt(batchRecord.Caneage) || parseInt(weightRecord.CaneAge) || 0
         });
@@ -59,15 +55,10 @@ export async function getBatchDataForPrediction(req, res) {
     }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   POST /api/predictions/run
-   Main prediction endpoint — calls ML service, saves result
-───────────────────────────────────────────────────────────── */
 export async function runPrediction(req, res) {
     try {
         const { batchId, durationDays, avgTemp, avgHumidity } = req.body;
 
-        // Validate required user inputs
         if (!batchId || !durationDays || avgTemp === undefined || avgHumidity === undefined) {
             return res.status(400).json({
                 message: 'batchId, durationDays, avgTemp, and avgHumidity are required'
@@ -78,7 +69,6 @@ export async function runPrediction(req, res) {
             return res.status(400).json({ message: 'durationDays must be 2, 3, or 4' });
         }
 
-        // Fetch all batch data from DB
         const [rendementRecord, weightRecord, batchRecord] = await Promise.all([
             Rendement.findOne({ BatchId: batchId }).sort({ date: -1 }),
             Weight.findOne({ BatchId: batchId }),
@@ -101,7 +91,6 @@ export async function runPrediction(req, res) {
             });
         }
 
-        // Build feature values
         const caneAge = parseInt(batchRecord.Caneage) || parseInt(weightRecord.CaneAge) || 0;
         const batchWeight = weightRecord.NetWeight;
         const storageCompartment = weightRecord.StorageUnit || 'A';
@@ -130,7 +119,20 @@ export async function runPrediction(req, res) {
             });
         }
 
-        const { predicted_rendement, feature_importance } = mlResponse.data;
+        let { predicted_rendement, feature_importance } = mlResponse.data;
+
+        if (predicted_rendement >= entryRendement) {
+            let dailyLossFactor = 0.005;
+
+            // Additional penalty for high temperature (above 30C)
+            if (Number(avgTemp) > 30) dailyLossFactor += 0.002;
+
+            // Additional penalty for high humidity (above 80%)
+            if (Number(avgHumidity) > 80) dailyLossFactor += 0.002;
+
+            const totalLossPercent = dailyLossFactor * Number(durationDays);
+            predicted_rendement = entryRendement - (entryRendement * totalLossPercent);
+        }
 
         // Calculate loss values
         const predictedLoss = parseFloat((entryRendement - predicted_rendement).toFixed(2));
@@ -185,10 +187,7 @@ export async function runPrediction(req, res) {
     }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   GET /api/predictions/history
-   All past predictions — optional filter by compartment & date
-───────────────────────────────────────────────────────────── */
+
 export async function getPredictionHistory(req, res) {
     try {
         const { compartment, from, to } = req.query;
@@ -198,7 +197,7 @@ export async function getPredictionHistory(req, res) {
         if (from || to) {
             filter.createdAt = {};
             if (from) filter.createdAt.$gte = new Date(from);
-            if (to)   filter.createdAt.$lte = new Date(to);
+            if (to) filter.createdAt.$lte = new Date(to);
         }
 
         const predictions = await Prediction.find(filter).sort({ createdAt: -1 });
@@ -213,45 +212,34 @@ export async function getPredictionHistory(req, res) {
     }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   GET /api/predictions/summary
-   Aggregate loss stats per compartment — for Loss Monitoring
-───────────────────────────────────────────────────────────── */
+
 export async function getLossSummary(req, res) {
     try {
+        // Filter to last 7 days
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const weekFilter = { createdAt: { $gte: sevenDaysAgo } };
+
         const summary = await Prediction.aggregate([
+            { $match: weekFilter },
             {
                 $group: {
                     _id: '$storageCompartment',
                     totalBatches: { $sum: 1 },
-                    avgLossPercent: { $avg: '$predictedLoss' },
+                    totalBatchWeight: { $sum: '$batchWeight' },
                     totalSucroseLost: { $sum: '$sucroseLoss' },
+                    totalSucroseUsed: { $sum: '$predictedSucrose' },
+                    avgLossPercent: { $avg: '$predictedLoss' },
                     avgTemp: { $avg: '$avgTemp' },
-                    avgHumidity: { $avg: '$avgHumidity' },
-                    avgDuration: { $avg: '$durationDays' }
+                    avgHumidity: { $avg: '$avgHumidity' }
                 }
             },
             { $sort: { _id: 1 } }
         ]);
 
-        // Also aggregate by compartment + duration for the bar chart
-        const byDuration = await Prediction.aggregate([
-            {
-                $group: {
-                    _id: {
-                        compartment: '$storageCompartment',
-                        duration: '$durationDays'
-                    },
-                    avgLoss: { $avg: '$predictedLoss' },
-                    count: { $sum: 1 }
-                }
-            },
-            { $sort: { '_id.compartment': 1, '_id.duration': 1 } }
-        ]);
-
         return res.status(200).json({
             compartmentSummary: summary,
-            durationBreakdown: byDuration
+            weekFrom: sevenDaysAgo
         });
 
     } catch (error) {
@@ -259,10 +247,6 @@ export async function getLossSummary(req, res) {
     }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   GET /api/predictions/:id
-   Single prediction detail by MongoDB _id
-───────────────────────────────────────────────────────────── */
 export async function getPredictionById(req, res) {
     try {
         const prediction = await Prediction.findById(req.params.id);
@@ -275,10 +259,6 @@ export async function getPredictionById(req, res) {
     }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   GET /api/training-data/export
-   Export all StorageTrainingData as JSON — used for Colab
-───────────────────────────────────────────────────────────── */
 export async function exportTrainingData(req, res) {
     try {
         const data = await StorageTrainingData.find({}, { __v: 0, _id: 0 });
@@ -291,10 +271,6 @@ export async function exportTrainingData(req, res) {
     }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   POST /api/training-data/add
-   Add a single training record
-───────────────────────────────────────────────────────────── */
 export async function addTrainingRecord(req, res) {
     try {
         const { durationDays, avgTemp, avgHumidity, brix, pol, purity, actualRendement } = req.body;
@@ -311,10 +287,7 @@ export async function addTrainingRecord(req, res) {
     }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   POST /api/training-data/bulk-add
-   Insert ALL records at once via Postman (array of objects)
-───────────────────────────────────────────────────────────── */
+
 export async function bulkAddTrainingData(req, res) {
     try {
         const data = req.body;
