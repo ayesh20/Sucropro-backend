@@ -7,6 +7,7 @@ import batchRouter from "./routers/newbatchRouter.js"
 import renRouter from "./routers/renRouter.js"
 import weightRouter from "./routers/weightRouter.js"
 import predictionRouter from "./routers/predictionRouter.js"
+import insightRouter from "./routers/insightRouter.js"
 import jwt from "jsonwebtoken"
 import cors from "cors"
 import dotenv from "dotenv"
@@ -72,6 +73,7 @@ app.use("/api/batch", batchRouter)
 app.use("/api/rendement", renRouter)
 app.use("/api/weight", weightRouter)
 app.use("/api/predictions", predictionRouter)
+app.use("/api/insights", insightRouter)
 
 /* ── Server ── */
 app.listen(process.env.PORT, () => {
